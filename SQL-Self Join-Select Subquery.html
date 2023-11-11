@@ -50,7 +50,7 @@ on mgr.empid = emp.mgrid
 SELECT distinct mgr.empid, mgr.lastname + ' ' + mgr.firstname, mgr.title,
     (select count(*)
         from [HR].[Employees] as emp2
-        where emp2.mgrid = mgr.empid) as total--「=」右邊亦可用 emp.mgrid
+        where emp2.mgrid = mgr.empid) as total --「=」右邊亦可用 emp.mgrid
 FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr --INNER JOIN 會濾掉 NULL
 on mgr.empid = emp.mgrid
 /*1
