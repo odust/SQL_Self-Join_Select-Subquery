@@ -44,14 +44,14 @@ ON MGR.empid = EMP.mgrid
 SELECT empid, lastname + ' ' + firstname, mgrid FROM [HR].[Employees]
 --先找出哪些人擔任主管
 SELECT distinct mgr.empid, mgr.lastname + ' ' + mgr.firstname, mgr.title
-FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr--INNER JOIN 會濾掉 NULL
+FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr --INNER JOIN 會濾掉 NULL
 on mgr.empid = emp.mgrid
 --然後根據外部查詢的主管資訊 進行內部 查詢 員工數量
 SELECT distinct mgr.empid, mgr.lastname + ' ' + mgr.firstname, mgr.title,
     (select count(*)
         from [HR].[Employees] as emp2
         where emp2.mgrid = mgr.empid) as total--「=」右邊亦可用 emp.mgrid
-FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr--INNER JOIN 會濾掉 NULL
+FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr --INNER JOIN 會濾掉 NULL
 on mgr.empid = emp.mgrid
 /*1
 2
