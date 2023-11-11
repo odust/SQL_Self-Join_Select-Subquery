@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"><title>SQL-Self Join-Select Subquery</title>
+<meta name="viewport" content="width=device-width">
+<style>
+    /* .prettyprint.linenums ol li, pre.prettyprint.linenums ol li {list-style: decimal;} */
+    .prettyprint ol.linenums > li {list-style: decimal; padding-left: .5em;}
+    .kwd {font-weight: 800;} pre {font-size: 16px;}
+</style>
+</head>
+
+<body><!-- 以下勿用<code>,否則只能保留空格,無法保留換行符號 -->
+<pre class="prettyprint linenums lang-sql">
+--自己跟自己 Join 就是 Self Join,不論是 Inner 或是 Outer
+USE [TSQL]
+SELECT * FROM [HR].[Employees]
+
+--列出各員工的直屬上司資訊
+--若這樣寫,一號員工,因為沒有老闆就無法顯示
+SELECT EMP.empid, EMP.lastname + ' ' + EMP.firstname, '' as 空白欄,
+       MGR.empid, MGR.lastname + ' ' + MGR.firstname, MGR.title
+FROM [HR].[Employees] AS EMP INNER JOIN [HR].[Employees] AS MGR
+ON MGR.empid = EMP.mgrid
+
+--須用「LEFT OUTER JOIN」
+SELECT EMP.empid, EMP.lastname, EMP.firstname, '' as 空白欄,
+       MGR.empid, MGR.lastname + ' ' + MGR.firstname, MGR.title
+FROM [HR].[Employees] AS EMP LEFT OUTER JOIN [HR].[Employees] AS MGR
+ON MGR.empid = EMP.mgrid
+/*
+  ----emp info-----        -----manager info-----
+1  Davis      Sara           NULL  NULL  NULL
+2  Funk       Don            1	Davis	Sara
+3  Lew        Judy           2	Funk	Don
+.
+.
+.
+9  Dolg...    Zoya           5	Buck	Sven
+*/
+</pre>
+<pre class="prettyprint linenums lang-sql">
+--考題 從員工資料表 找出 主管資訊 & 帶領人數
+SELECT empid, lastname + ' ' + firstname, mgrid FROM [HR].[Employees]
+--先找出哪些人擔任主管
+SELECT distinct mgr.empid, mgr.lastname + ' ' + mgr.firstname, mgr.title
+FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr--INNER JOIN 會濾掉 NULL
+on mgr.empid = emp.mgrid
+--然後根據外部查詢的主管資訊 進行內部 查詢 員工數量
+SELECT distinct mgr.empid, mgr.lastname + ' ' + mgr.firstname, mgr.title,
+    (select count(*)
+        from [HR].[Employees] as emp2
+        where emp2.mgrid = mgr.empid) as total--「=」右邊亦可用 emp.mgrid
+FROM [HR].[Employees] as emp inner join [HR].[Employees] as mgr--INNER JOIN 會濾掉 NULL
+on mgr.empid = emp.mgrid
+/*1
+2
+3
+2
+5
+5
+3
+5 */
+</pre>
+<pre class="prettyprint linenums lang-sql">
+--再做同一題: 從員工資料表 找出 主管資訊 & 帶領人數 (有帶人 等價 是主管)
+--留下以下數據中 total > 0 之數據
+--先找出每個人的帶領人數
+SELECT ppl.empid, ppl.lastname + ' ' + ppl.firstname, ppl.title,
+    (SELECT COUNT(*)
+        FROM [HR].[Employees] as emp
+        WHERE emp.mgrid = ppl.empid) as total
+FROM [HR].[Employees] as ppl
+/*WHERE empid in (SELECT mgrid
+                FROM [HR].[Employees] )*/
+
+--請繼續上述陳述繼續寫出來
+SELECT *
+FROM (--以下的 lastname firstname 串接須指定 alias,否則該欄無法引用,會出包
+    SELECT ppl.empid, ppl.lastname + ' ' + ppl.firstname AS [Name], ppl.title,
+        (SELECT COUNT(*)
+            FROM [HR].[Employees] as emp
+            WHERE emp.mgrid = ppl.empid) as total
+    FROM [HR].[Employees] as ppl
+) AS XYZ
+WHERE XYZ.total > 0
+</pre>
+<pre class="prettyprint linenums lang-sql">
+--判斷哪些人擔任主管
+SELECT * FROM [HR].[Employees]
+WHERE empid in (SELECT mgrid
+                FROM [HR].[Employees])
+
+--哪些人不擔任主管 (why not 直接「NOT IN」?)
+SELECT * FROM [HR].[Employees]
+WHERE empid not in (SELECT mgrid
+                    FROM [HR].[Employees])
+                    --內層就是主管編號 但是因為有 NULL 導致 NOT IN 整個失效
+
+--法1: (最耗資源) WHERE 子查詢 套兩層 外層是非主管編號 內層是主管編號
+SELECT * FROM [HR].[Employees]
+WHERE empid NOT IN (
+                    SELECT empid FROM [HR].[Employees]
+                    WHERE  empid in (SELECT mgrid
+                                     FROM [HR].[Employees])
+                   )
+
+--法2: 用 ISNULL() / COALESCE() 改變 NULL
+SELECT * FROM [HR].[Employees]
+WHERE empid not in (SELECT ISNULL(mgrid, -1)--COALESCE()亦可,總之先把NULL弄掉
+                    FROM [HR].[Employees])
+
+--法3: 直接排除 NULL 即可
+SELECT * FROM [HR].[Employees]
+WHERE empid not in (SELECT mgrid
+                    FROM [HR].[Employees]
+                    WHERE mgrid IS NOT NULL)
+</pre>
+</body>
+
+<!-- <script src="https://cdn.jsdelivr.net/gh/google/code-prettify@master/loader/run_prettify.js"></script> -->
+<script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js?skin=sunburst"></script>
+<!-- <script src="https://cdn.rawgit.com/google/code-prettify/master/loader/run_prettify.js"></script> -->
+<script src="./lang-sql.js"></script>
+<script>
+	prettyPrint();
+</script>
+</html>
